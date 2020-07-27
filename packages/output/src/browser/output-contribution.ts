@@ -19,7 +19,7 @@ import URI from '@theia/core/lib/common/uri';
 import { Widget } from '@theia/core/lib/browser/widgets/widget';
 import { MaybePromise } from '@theia/core/lib/common/types';
 import { CommonCommands, quickCommand, OpenHandler, OpenerOptions } from '@theia/core/lib/browser';
-import { Command, CommandRegistry, MenuModelRegistry } from '@theia/core/lib/common';
+import { Command, CommandRegistry, MenuModelRegistry, CommandService } from '@theia/core/lib/common';
 import { AbstractViewContribution } from '@theia/core/lib/browser/shell/view-contribution';
 import { OutputWidget } from './output-widget';
 import { OutputContextMenu } from './output-context-menu';
@@ -111,6 +111,9 @@ export class OutputContribution extends AbstractViewContribution<OutputWidget> i
 
     @inject(ClipboardService)
     protected readonly clipboardService: ClipboardService;
+
+    @inject(CommandService)
+    protected readonly commandService: CommandService;
 
     readonly id: string = `${OutputWidget.ID}-opener`;
 
@@ -204,7 +207,12 @@ export class OutputContribution extends AbstractViewContribution<OutputWidget> i
             throw new Error(`Expected '${OutputUri.SCHEME}' URI scheme. Got: ${uri} instead.`);
         }
         const widget = await this.openView(options);
-        widget.setInput(OutputUri.channelName(uri));
+        let preserveFocus = false;
+        if (options && 'activate' in options && options['activate'] === true) {
+            preserveFocus = true;
+        }
+        const name = OutputUri.channelName(uri);
+        await this.commandService.executeCommand(OutputCommands.SHOW.id, { name, options: { preserveFocus } });
         return widget;
     }
 
